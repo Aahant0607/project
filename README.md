@@ -1,118 +1,106 @@
+### **Team Members**
+* **Name:**     Aahant Kumar
+* **Email:**    royaahantbhardwaj@gmail.com
+* **Roll No.:** 24/A11/001 
+* **Name:**     Divyansh Sharma
+* **Email:**    divyanshsharma_23ch023@dtu.ac.in
+* **Roll No.:** 23/CH/023
 
----
 
-# SAR to EO Dataset Preprocessing
+Task 1
 
-This script performs preprocessing of Synthetic Aperture Radar (SAR) and Electro-Optical (EO) imagery datasets for machine learning tasks such as image translation, denoising, or classification. It reads `.tif` files from region folders, applies denoising, resizing, and normalization, and saves the processed tensors as `.pt` files.
 
----
 
-## 📂 Folder Structure
+Task 2
+# Cloud Segmentation with U-Net and Sentinel-2 Imagery
 
-Expected input folder structure:
+This project implements a complete deep learning pipeline for semantic segmentation of clouds in Sentinel-2 satellite images. It utilizes the `CloudSEN12` dataset, a U-Net model with an EfficientNet backbone, and the PyTorch ecosystem.
 
-```
-ROIs2017_winter_s1/
-└── ROIs2017_winter/
-    ├── s1_ROI_1/
-    │   ├── image1.tif
-    │   └── image2.tif
-    └── s1_ROI_2/
-        └── ...
-        
-ROIs2017_winter_s2/
-└── ROIs2017_winter/
-    ├── s2_ROI_1/
-    │   ├── image1.tif
-    │   └── image2.tif
-    └── s2_ROI_2/
-        └── ...
-```
 
-After preprocessing, the output will be structured as:
+***
+### **b. Project Overview**
+The goal of this project is to accurately identify and segment cloud cover from satellite imagery. This is a crucial preprocessing step for many remote sensing applications, as clouds can obscure ground features.
 
-```
-output/
-├── s1_ROI_1/
-│   ├── SAR.pt
-│   └── EO.pt
-└── s1_ROI_2/
-    ├── SAR.pt
-    └── EO.pt
-```
+This repository provides an end-to-end solution that:
+1.  Downloads and prepares a subset of the `CloudSEN12` dataset.
+2.  Preprocesses the image data and masks for training.
+3.  Implements robust data augmentation to improve model generalization.
+4.  Trains a **U-Net** model with a pre-trained **EfficientNet-B2** backbone.
+5.  Evaluates the model using Intersection over Union (IoU), F1-Score, and Pixel Accuracy.
+6.  Visualizes the model's predictions against the ground truth masks.
 
----
+***
+### **c. Instructions to Run Code**
 
-## ✅ Features
+1.  **Clone the Repository (Optional):**
+    If this were a git repository, you would clone it first.
+    ```bash
+    git clone [https://your-repository-url.com/cloud-segmentation.git](https://your-repository-url.com/cloud-segmentation.git)
+    cd cloud-segmentation
+    ```
 
-* Supports SAR (S1) and EO (S2) image modalities
-* Applies **Non-Local Means Denoising** to reduce noise
-* Resizes images to **224×224**
-* Normalizes pixel values to **\[0, 1]**
-* Outputs tensors stacked by time or channels using **PyTorch**
+2.  **Install Dependencies:**
+    Install all the required Python libraries using the `requirements.txt` file.
+    ```bash
+    pip install -r requirements.txt
+    ```
 
----
+3.  **Run the Script:**
+    Execute the main Python script named `train_cloud_mask_model.py`.
 
-## ⚙️ Dependencies
+    ```bash
+    python train.py
+    ```
+    * **First Run:** The script will automatically download ~3000 samples from the `CloudSEN12` dataset and save them to a local `./temp_data/` directory. This may take some time depending on your network connection.
+    * keep this piece of code uncommented:
+    * keep this piece of code commented:
+    * **Subsequent Runs:** The script is designed to detect the existing local data and will skip the download process, proceeding directly to training.
+    * keep this piece of code uncommented:
+    * keep this piece of code commented:
 
-* Python 3.7+
-* PyTorch
-* torchvision
-* rasterio
-* scikit-image
-* numpy
+***
+### **d. Description**
 
-Install required packages:
+#### **i. Data Preprocessing Steps**
 
-```bash
-pip install torch torchvision rasterio scikit-image numpy
-```
+The data pipeline is designed for efficiency and correctness:
+* **Data Source:** The project uses the `tacofoundation:cloudsen12-l1c` dataset, accessed via the `tacoreader` library.
+* **Localization:** To accelerate I/O operations during training, a subset of 3000 image/mask pairs is downloaded and saved locally as NumPy (`.npy`) files.
+* **Band Selection:** Only the true-color **RGB bands (4, 3, 2)** are used from the Sentinel-2 L1C data.
+* **Image Normalization:** The raw 16-bit image data is clipped at a maximum pixel value of 4000 (to handle sensor saturation) and then scaled to a standard 8-bit format (0-255) suitable for the model's pre-trained backbone.
+* **Mask Binarization:** The original ground truth masks have multiple classes. For this binary segmentation task, the 'thin cloud' (value 1) and 'thick cloud' (value 2) labels are merged into a single 'cloud' class (1.0), with all other pixels set to 'no cloud' (0.0).
+* **Data Augmentation:** The `albumentations` library is used to create robust training data. Augmentations include:
+    * Resizing to $256 \times 256$ pixels.
+    * Geometric transforms: Horizontal Flips, Vertical Flips, and 90-degree Rotations.
+    * Photometric transforms: Color Jitter (adjusting brightness, contrast, and saturation).
 
----
+#### **ii. Models Used**
+* **Architecture:** The core model is a **U-Net**, a convolutional neural network architecture widely used for biomedical and satellite image segmentation. It is sourced from the highly-regarded `segmentation-models-pytorch` library.
+* **Backbone:** An **EfficientNet-B2** encoder, pre-trained on ImageNet, is used as the feature extractor (the "backbone") for the U-Net. This leverages transfer learning to achieve better performance with less training time.
+* **Loss Function:** A composite loss function is employed to handle the potential class imbalance between cloud and non-cloud pixels. It is a weighted sum of **Focal Loss** and **Dice Loss**:
+    $$ L = 0.25 \times L_{Focal} + 0.75 \times L_{Dice} $$
+    This combination helps the model focus on hard-to-classify pixels while also directly optimizing for segmentation overlap (IoU).
 
-## 🚀 Usage
+#### **iii. Key Findings or Observations**
+The model was trained until the validation IoU score stopped improving for 5 consecutive epochs (early stopping). The best model was saved and evaluated.
 
-Run the script from the command line:
+* **Quantitative Results:** The final model achieved excellent performance on the held-out validation set:
+    * **IoU Score:** 0.7619
+    * **F1 Score:** 0.8648
+    * **Pixel Accuracy:** 0.9015
 
-```bash
-python preprocess.py
-```
+* **Qualitative Results:** The visual comparison of predicted masks against the ground truth shows that the model is highly effective. It successfully identifies the complex shapes and boundaries of clouds, with only minor discrepancies around the very fine edges.
 
-By default, it uses:
+* **Training Strategy:** The use of a pre-trained backbone, a composite loss function, and extensive data augmentation proved to be a successful strategy for this task. The `AdamW` optimizer and `ReduceLROnPlateau` scheduler provided stable convergence.
 
-```python
-s1_folder = r"ROIs2017_winter_s1\ROIs2017_winter"
-s2_folder = r"ROIs2017_winter_s2\ROIs2017_winter"
-output_folder = "output"
-```
-
-You can modify these paths directly in the script or adapt it to take command-line arguments.
-
----
-
-## 🧠 How It Works
-
-* **`read_and_process_images_torch()`**: Reads `.tif` files, denoises, resizes to 224×224, normalizes to \[0, 1], and stacks them into a tensor.
-* **`process_all_torch()`**: Iterates over each ROI in the SAR folder, finds the corresponding EO folder, processes both, and saves them as `SAR.pt` and `EO.pt`.
-
----
-
-## 📌 Notes
-
-* Assumes ROI folder names follow the pattern `s1_` for SAR and `s2_` for EO, e.g., `s1_ROI_1` and `s2_ROI_1`.
-* If an EO folder is missing, it will continue with SAR-only processing.
-* Non-Local Means denoising uses `scikit-image` with estimated noise level.
-
----
-
-## 📁 Output
-
-Each processed ROI will contain:
-
-* `SAR.pt`: Denoised, resized, normalized tensor of SAR images
-* `EO.pt`: Denoised, resized, normalized tensor of EO images
-
-These are saved in PyTorch format using `torch.save`.
-
----
-By Aahant Kumar(24/A11/001) and Divyansh Sharma(23/CH/023) 
+***
+### **e. Tools and Frameworks**
+* **Primary Framework:** **PyTorch**
+* **Key Libraries:**
+    * `segmentation-models-pytorch`: For pre-built U-Net model architecture.
+    * `albumentations`: For high-performance data augmentation.
+    * `tacoreader`: For streaming the CloudSEN12 dataset.
+    * `rasterio`: For reading geospatial raster data.
+    * `scikit-learn`: For splitting data into training and validation sets.
+    * `numpy`: For numerical operations.
+    * `matplotlib`: For visualization.
