@@ -52,11 +52,33 @@ This repository provides an end-to-end solution that:
     python train.py
     ```
     * **First Run:** The script will automatically download ~3000 samples from the `CloudSEN12` dataset and save them to a local `./temp_data/` directory. This may take some time depending on your network connection.
-    * keep this piece of code uncommented:
     * keep this piece of code commented:
+    demo_indices, img_dir, mask_dir = localize_dataset(cfg)
+    
+    * keep this piece of code uncommented:
+    print("--- Bypassing download, assuming data exists locally ---")
+    img_dir = Path("./temp_data/images")
+    mask_dir = Path("./temp_data/masks")
+    if not img_dir.exists():
+        print(f"Error: Local data directory not found at {img_dir}. Please run localize_dataset() first.")
+    else:
+        demo_indices = [int(p.stem) for p in img_dir.glob("*.npy")]
+        print(f"✅ Found {len(demo_indices)} local samples at {img_dir}")
+
+   
     * **Subsequent Runs:** The script is designed to detect the existing local data and will skip the download process, proceeding directly to training.
     * keep this piece of code uncommented:
+    demo_indices, img_dir, mask_dir = localize_dataset(cfg)
+    
     * keep this piece of code commented:
+    print("--- Bypassing download, assuming data exists locally ---")
+    img_dir = Path("./temp_data/images")
+    mask_dir = Path("./temp_data/masks")
+    if not img_dir.exists():
+        print(f"Error: Local data directory not found at {img_dir}. Please run localize_dataset() first.")
+    else:
+        demo_indices = [int(p.stem) for p in img_dir.glob("*.npy")]
+        print(f"✅ Found {len(demo_indices)} local samples at {img_dir}")
 
 ***
 ### **d. Description**
