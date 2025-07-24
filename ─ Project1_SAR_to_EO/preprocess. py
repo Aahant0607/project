@@ -58,13 +58,13 @@ def preprocess_dataset(s1_dir, s2_dir, output_dir):
 
     for i, roi_name in enumerate(rois):
         roi_number = f"{i+1:04d}"  # e.g., 0001, 0002...
-        print(f"🔄 Processing ROI {roi_name} → {roi_number}")
+        print(f" Processing ROI {roi_name} → {roi_number}")
 
         s1_roi_path = os.path.join(s1_dir, roi_name)
         s2_roi_path = os.path.join(s2_dir, roi_name.replace("s1_", "s2_"))
 
         if not os.path.exists(s2_roi_path):
-            print(f"⚠️ EO folder missing: {s2_roi_path}")
+            print(f" EO folder missing: {s2_roi_path}")
             continue
 
         output_path = os.path.join(output_dir, roi_number)
@@ -87,7 +87,7 @@ def preprocess_dataset(s1_dir, s2_dir, output_dir):
 
         print(f" Saved to: {output_path}\n")
 
-    print(f"\n🏁 All ROIs processed. Output organized at: {output_dir}")
+    print(f"\n All ROIs processed. Output organized at: {output_dir}")
 
 # === Run ===
 if __name__ == "__main__":
