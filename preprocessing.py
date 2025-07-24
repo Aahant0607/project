@@ -3,84 +3,96 @@ import torch
 import torchvision.transforms.functional as TF
 import rasterio
 import numpy as np
+from enum import Enum
 from skimage.restoration import denoise_nl_means, estimate_sigma
 
-def normalize_255_torch(tensor):
-    return tensor / 255.0
+# === Sentinel-2 Band Enum ===
+class S2Bands(Enum):
+    B02 = 2  # Blue
+    B03 = 3  # Green
+    B04 = 4  # Red
+    B05 = 5  # Red Edge
+    B08 = 8  # NIR
+    B11 = 12  # SWIR
 
-def resize_torch(img_tensor, size=(224, 224)):
-    img_tensor = img_tensor.unsqueeze(0)  # Add channel dim: (1, H, W)
-    img_resized = TF.resize(img_tensor, size, interpolation=TF.InterpolationMode.BILINEAR)
-    return img_resized.squeeze(0)  # Back to (H, W)
+# === Band configs ===
+EO_CONFIGS = {
+    "EO_RGB": [S2Bands.B04, S2Bands.B03, S2Bands.B02],
+    "EO_NIR_SWIR_RE": [S2Bands.B08, S2Bands.B11, S2Bands.B05],
+    "EO_RGB_NIR": [S2Bands.B04, S2Bands.B03, S2Bands.B02, S2Bands.B08],
+}
 
-def denoise_nlm_torch(img_tensor, h_factor=1.15, patch_size=5, patch_distance=6, fast_mode=True):
+# === Utility Functions ===
+def normalize_cycle_gan(tensor):
+    return tensor * 2.0 - 1.0
+
+def resize_torch(img_tensor, size=(256, 256)):
+    return TF.resize(img_tensor.unsqueeze(0), size, interpolation=TF.InterpolationMode.BILINEAR).squeeze(0)
+
+def denoise_nlm_torch(img_tensor, h_factor=1.15):
     img_np = img_tensor.cpu().numpy()
     sigma_est = np.mean(estimate_sigma(img_np, channel_axis=None))
-    denoised = denoise_nl_means(
-        img_np,
-        h=h_factor * sigma_est,
-        fast_mode=fast_mode,
-        patch_size=patch_size,
-        patch_distance=patch_distance,
-        channel_axis=None
-    )
-    return torch.from_numpy(denoised).to(img_tensor.device).float()
+    denoised = denoise_nl_means(img_np, h=h_factor * sigma_est, fast_mode=True, patch_size=5, patch_distance=6)
+    return torch.from_numpy(denoised).float()
 
-def read_and_process_images_torch(folder_path, apply_denoise=True):
-    imgs = []
-    for file in sorted(os.listdir(folder_path)):
-        if file.endswith('.tif'):
-            with rasterio.open(os.path.join(folder_path, file)) as src:
-                img = src.read(1).astype(np.float32)
-                img_tensor = torch.from_numpy(img)
+def process_patch(filepath, band_indices, apply_denoise=True):
+    with rasterio.open(filepath) as src:
+        img = src.read(band_indices).astype(np.float32)
+    img_tensor = torch.from_numpy(img)
 
-                if apply_denoise:
-                    img_tensor = denoise_nlm_torch(img_tensor)
+    bands = []
+    for band in img_tensor:
+        if apply_denoise:
+            band = denoise_nlm_torch(band)
+        band = resize_torch(band)
+        band = band / 255.0
+        band = normalize_cycle_gan(band)
+        bands.append(band)
 
-                img_tensor = resize_torch(img_tensor, (224, 224))
-                img_tensor = normalize_255_torch(img_tensor)
-                imgs.append(img_tensor)
+    return torch.stack(bands)
 
-    return torch.stack(imgs, dim=0) if imgs else None
+# === Main Preprocessing ===
+def preprocess_dataset(s1_dir, s2_dir, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    rois = sorted([f for f in os.listdir(s1_dir) if f.startswith("s1_")])
 
-def process_all_torch(s1_folder, s2_folder, output_folder):
-    os.makedirs(output_folder, exist_ok=True)
-    rois = [f for f in os.listdir(s1_folder) if os.path.isdir(os.path.join(s1_folder, f))]
-    print(f"Found {len(rois)} ROIs.")
+    for i, roi_name in enumerate(rois):
+        roi_number = f"{i+1:04d}"  # e.g., 0001, 0002...
+        print(f"🔄 Processing ROI {roi_name} → {roi_number}")
 
-    for roi in rois:
-        print(f"Processing ROI: {roi}")
-        s1_roi_path = os.path.join(s1_folder, roi)
-        s2_roi_name = roi.replace('s1_', 's2_', 1)
-        s2_roi_path = os.path.join(s2_folder, s2_roi_name)
-        out_roi_path = os.path.join(output_folder, roi)
-        os.makedirs(out_roi_path, exist_ok=True)
+        s1_roi_path = os.path.join(s1_dir, roi_name)
+        s2_roi_path = os.path.join(s2_dir, roi_name.replace("s1_", "s2_"))
 
-        # EO
-        if os.path.exists(s2_roi_path):
-            eo_stack = read_and_process_images_torch(s2_roi_path, apply_denoise=True)
-            if eo_stack is not None:
-                torch.save(eo_stack, os.path.join(out_roi_path, "EO.pt"))
-                print("  Saved EO.pt")
-            else:
-                print("  No EO .tif files found.")
-        else:
-            print("  EO folder not found.")
+        if not os.path.exists(s2_roi_path):
+            print(f"⚠️ EO folder missing: {s2_roi_path}")
+            continue
 
-        # SAR
-        sar_stack = read_and_process_images_torch(s1_roi_path, apply_denoise=True)
-        if sar_stack is not None:
-            torch.save(sar_stack, os.path.join(out_roi_path, "SAR.pt"))
-            print("  Saved SAR.pt")
-        else:
-            print("  No SAR .tif files found.")
+        output_path = os.path.join(output_dir, roi_number)
+        os.makedirs(output_path, exist_ok=True)
 
-    print("\n✅ All ROIs processed. Preprocessed data saved in:", output_folder)
+        # --- Process SAR ---
+        sar_files = sorted([f for f in os.listdir(s1_roi_path) if f.endswith('.tif')])
+        sar_path = os.path.join(s1_roi_path, sar_files[0])  # assumes 1 file
+        sar_tensor = process_patch(sar_path, band_indices=[1, 2])
+        torch.save(sar_tensor, os.path.join(output_path, "SAR.pt"))
 
+        # --- Process EO for each config ---
+        eo_files = sorted([f for f in os.listdir(s2_roi_path) if f.endswith('.tif')])
+        eo_path = os.path.join(s2_roi_path, eo_files[0])  # assumes 1 file with all bands
+
+        for config_name, bands in EO_CONFIGS.items():
+            band_indices = [b.value for b in bands]
+            eo_tensor = process_patch(eo_path, band_indices)
+            torch.save(eo_tensor, os.path.join(output_path, f"{config_name}.pt"))
+
+        print(f"✅ Saved to: {output_path}\n")
+
+    print(f"\n🏁 All ROIs processed. Output organized at: {output_dir}")
+
+# === Run ===
 if __name__ == "__main__":
     s1_folder = r"ROIs2017_winter_s1\ROIs2017_winter"
     s2_folder = r"ROIs2017_winter_s2\ROIs2017_winter"
-    output_folder = "output"
+    output_folder = "Preprocessed_Output"
 
-    process_all_torch(s1_folder, s2_folder, output_folder)
-    print(f"\n✅ Processing complete. Outputs saved in '{output_folder}'.")
+    preprocess_dataset(s1_folder, s2_folder, output_folder)
