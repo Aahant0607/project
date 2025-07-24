@@ -187,8 +187,7 @@ if __name__ == '__main__':
     
     # STEP 1: Run the localization process
     #demo_indices, img_dir, mask_dir = localize_dataset(cfg)
-    # STEP 1: Comment out the localization process to prevent re-downloading
-    # demo_indices, img_dir, mask_dir = localize_dataset(cfg)
+    # (STEP 1: Comment out the localization process to prevent re-downloading)
     # 2. Delete the old model checkpoint to prevent errors with new architecture
     model_path = Path('best_model.pth')
     if model_path.exists():
@@ -197,7 +196,7 @@ if __name__ == '__main__':
     else:
         print("👍 No old model checkpoint found. Starting fresh.")
     
-    # Manually define the absolute paths for your Kaggle environment
+    # Manually define the absolute paths for your Kaggle environment(When STEP 1: Comment out the localization process to prevent re-downloading)
     print("--- Step 1: Bypassing download, using existing Kaggle data ---")
     img_dir = Path("/kaggle/working/temp_data/images")
     mask_dir = Path("/kaggle/working/temp_data/masks")
