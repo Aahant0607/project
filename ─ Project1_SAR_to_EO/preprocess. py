@@ -85,7 +85,7 @@ def preprocess_dataset(s1_dir, s2_dir, output_dir):
             eo_tensor = process_patch(eo_path, band_indices)
             torch.save(eo_tensor, os.path.join(output_path, f"{config_name}.pt"))
 
-        print(f"✅ Saved to: {output_path}\n")
+        print(f" Saved to: {output_path}\n")
 
     print(f"\n🏁 All ROIs processed. Output organized at: {output_dir}")
 
