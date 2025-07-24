@@ -7,7 +7,7 @@
 * **Roll No.:** 23/CH/023
 
 
-Task 1
+#TASK 1
 
 # SAR-to-EO Translation with CycleGAN  
 **Using Sentinel-1 (SAR) to Sentinel-2 (EO) Winter Scenes**  
@@ -122,7 +122,7 @@ Each EO image includes **13 spectral bands** (Sentinel-2 L2A product).
 
 
 
-Task 2
+TASK 2
 # Cloud Segmentation with U-Net and Sentinel-2 Imagery
 
 This project implements a complete deep learning pipeline for semantic segmentation of clouds in Sentinel-2 satellite images. It utilizes the `CloudSEN12` dataset, a U-Net model with an EfficientNet backbone, and the PyTorch ecosystem.
@@ -189,7 +189,7 @@ This repository provides an end-to-end solution that:
         print(f"Error: Local data directory not found at {img_dir}. Please run localize_dataset() first.")
     else:
         demo_indices = [int(p.stem) for p in img_dir.glob("*.npy")]
-        print(f"✅ Found {len(demo_indices)} local samples at {img_dir}")
+        print(f" Found {len(demo_indices)} local samples at {img_dir}")
 
 ***
 ### **d. Description**
