@@ -7,7 +7,7 @@
 * **Roll No.:** 23/CH/023
 
 
-#TASK 1
+TASK 1
 
 # SAR-to-EO Translation with CycleGAN  
 **Using Sentinel-1 (SAR) to Sentinel-2 (EO) Winter Scenes**  
