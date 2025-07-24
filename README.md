@@ -7,9 +7,6 @@
 * **Roll No.:** 23/CH/023
 
 
-Task 1
-
-
 
 Task 2
 # Cloud Segmentation with U-Net and Sentinel-2 Imagery
