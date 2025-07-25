@@ -129,7 +129,7 @@ This project implements a complete deep learning pipeline for semantic segmentat
 
 
 ***
-### **b. Project Overview**
+### ** Project Overview**
 The goal of this project is to accurately identify and segment cloud cover from satellite imagery. This is a crucial preprocessing step for many remote sensing applications, as clouds can obscure ground features.
 
 This repository provides an end-to-end solution that:
@@ -141,7 +141,7 @@ This repository provides an end-to-end solution that:
 6.  Visualizes the model's predictions against the ground truth masks.
 
 ***
-### **c. Instructions to Run Code**
+### ** Instructions to Run Code**
 
 1.  **Clone the Repository (Optional):**
     If this were a git repository, you would clone it first.
@@ -192,7 +192,7 @@ This repository provides an end-to-end solution that:
         print(f" Found {len(demo_indices)} local samples at {img_dir}")
 
 ***
-### **d. Description**
+### ** Description**
 
 #### **i. Data Preprocessing Steps**
 
@@ -227,7 +227,7 @@ The model was trained until the validation IoU score stopped improving for 5 con
 * **Training Strategy:** The use of a pre-trained backbone, a composite loss function, and extensive data augmentation proved to be a successful strategy for this task. The `AdamW` optimizer and `ReduceLROnPlateau` scheduler provided stable convergence.
 
 ***
-### **e. Tools and Frameworks**
+### ** Tools and Frameworks**
 * **Primary Framework:** **PyTorch**
 * **Key Libraries:**
     * `segmentation-models-pytorch`: For pre-built U-Net model architecture.
